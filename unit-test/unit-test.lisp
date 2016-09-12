@@ -2,7 +2,8 @@
 
 (defun report-result (result form)
   (format t "~:[FAIL~;pass~] ... ~a: ~a~%" result *test-name* form)
-  result) 
+  result)
+
 (defmacro with-gensyms ((&rest names) &body body)
   `(let ,(loop for n in names collect `(,n (gensym)))
      ,@body))

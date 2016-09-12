@@ -1,9 +1,9 @@
 (in-package :cl-user)
 
-(defpackage :com.gigamonkeys.pathnames
+(defpackage :net.atmosia.pathnames
   (:use :common-lisp)
   (:export
-    :list-directories
+    :list-directory
     :file-exists-p
     :directory-pathname-p
     :file-pathname-p
@@ -13,6 +13,8 @@
     :directory-p
     :file-p))
 
+(in-package :net.atmosia.pathnames)
+
 (defun component-present-p (value)
   (and value (not (eql value :unspecified))))
 
@@ -20,12 +22,6 @@
   (and
     (not (component-present-p (pathname-name p)))
     (not (component-present-p (pathname-type p)))))
-
-(defun directory-wildcard (dirname)
-  (make-pathname
-    :name :wild
-    :type #-clisp :wild #+clisp NIL
-    :defaults (pathname-as-directory dirname)))
 
 (defun pathname-as-directory (name)
   (let ((pathname (pathname name)))
@@ -38,6 +34,12 @@
         :type      NIL
         :defaults  pathname)
       pathname)))
+
+(defun directory-wildcard (dirname)
+  (make-pathname
+    :name :wild
+    :type #-clisp :wild #+clisp NIL
+    :defaults (pathname-as-directory dirname)))
 
 #+clisp
 (defun clisp-subdirectories-wildcard (wildcard)

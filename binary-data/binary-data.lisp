@@ -155,5 +155,5 @@
 
 (defun current-binary-object () (first *in-progress-objects*))
 
-(defun parent-of-type ()
+(defun parent-of-type (type)
   (find-if #'(lambda (x) (typep x type)) *in-progress-objects*))

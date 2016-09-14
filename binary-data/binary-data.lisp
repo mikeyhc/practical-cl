@@ -16,7 +16,7 @@
 
 (defvar *in-progress-objects* nil)
 
-(defgeneric read-values (type stream &key)
+(defgeneric read-value (type stream &key)
   (:documentation "Read a value of the given type from the stream."))
 
 (defgeneric read-object (object stream)
@@ -85,7 +85,7 @@
 
        ,read-method
 
-       (defmethod write-value ((,objectvar ,name) ,streamvar)
+       (defmethod write-object ((,objectvar ,name) ,streamvar)
          (declare (ignorable ,streamvar))
          (with-slots ,(new-class-all-slots slots superclasses) ,objectvar
            ,@(mapcar #'(lambda (x) (slot->write-value x streamvar)) slots))))))

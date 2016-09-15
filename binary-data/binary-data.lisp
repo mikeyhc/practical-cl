@@ -14,6 +14,8 @@
 
 (in-package :net.atmosia.binary-data)
 
+(defconstant +null+ (code-char 0))
+
 (defvar *in-progress-objects* nil)
 
 (defgeneric read-value (type stream &key)

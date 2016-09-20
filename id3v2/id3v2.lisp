@@ -378,14 +378,14 @@
 (defun find-frame (id3 ids)
   (find-if #'(lambda (x) (find (id x) ids :test #'string=)) (frames id3)))
 
-(defun get-text-info (id3 &rest ids)
-  (let ((frame (find-frame id3 ids)))
-    (when frame (upto-null (information frame)))))
-
 (define-binary-class text-info-frame ()
   ((encoding u1)
    (information (id3-encoding-string :encoding encoding
                                      :length (bytes-left 1)))))
+
+(defun get-text-info (id3 &rest ids)
+  (let ((frame (find-frame id3 ids)))
+    (when frame (upto-null (information frame)))))
 
 (define-binary-class text-info-frame-v2.2 (id3v2.2-frame text-info-frame) ())
 (define-binary-class text-info-frame-v2.3 (id3v2.3-frame text-info-frame) ())
@@ -393,6 +393,16 @@
 (defun encoded-string-length (string encoding teminated)
   (let ((characters (+ (length string) (if teminated 1 0))))
     (* characters (ecase encoding (0 1) (1 2)))))
+
+(define-binary-type id3-encoded-string (encoding length terminator)
+  (:reader (in)
+    (multiple-value-bind (type keyword arg)
+        (string-args encoding length terminator)
+      (read-value type in keyword arg)))
+  (:writer (out string)
+    (multiple-value-bind (type keyword arg)
+        (string-args encoding length terminator)
+      (write-value type out string keyword arg))))
 
 (define-binary-class comment-frame ()
   ((encoding u1)

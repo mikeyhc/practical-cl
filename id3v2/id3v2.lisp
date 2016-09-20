@@ -199,6 +199,20 @@
 (defun crc-p (flags extra-flags)
   (and (extended-p flags) (logbitp 15 extra-flags)))
 
+(defun find-frame-class (name)
+  (cond
+    ((and (char= (char name 0) #\T)
+          (not (member name '("TXX" "TXXX") :test #'string=)))
+     (ecase (length name)
+       (3 'text-info-frame-v2.2)
+       (4 'text-info-frame-v2.3)))
+    ((string= name "COM") 'comment-frame-v2.2)
+    ((string= name "COMM") 'comment-frame-v2.3)
+    (t
+     (ecase (length name)
+       (3 'generic-frame-v2.2)
+       (4 'generic-frame-v2.3)))))
+
 (define-tagged-binary-class id3v2.2-frame ()
   ((id (frame-id :length 3))
    (size u3))
@@ -317,20 +331,6 @@
        (if (frame-compressed-p flags) 4 0)
        (if (frame-encryped-p flags) 1 0)
        (if (frame-grouped-p flags) 1 0))))
-
-(defun find-frame-class (name)
-  (cond
-    ((and (char= (char name 0) #\T)
-          (not (member name '("TXX" "TXXX") :test #'string=)))
-     (ecase (length name)
-       (3 'text-info-frame-v2.2)
-       (4 'text-info-frame-v2.3)))
-    ((string= name "COM") 'comment-frame-v2.2)
-    ((string= name "COMM") 'comment-frame-v2.3)
-    (t
-     (ecase (length name)
-       (3 'generic-frame-v2.2)
-       (4 'generic-frame-v2.3)))))
 
 (defun frame-types (file)
   (delete-duplicates (mapcar #'id (frames (read-id3 file))) :test #'string=))

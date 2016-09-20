@@ -409,7 +409,8 @@
 (define-binary-class comment-frame-v2.3 (id3v2.3-frame comment-frame) ())
 
 (defun song (id3) (get-text-info id3 "TT2" "TIT2"))
-(defun album (id3) (get-text-info id3 "TP1 TPE1"))
+(defun artist (id3) (get-text-info id3 "TP1" "TPE1"))
+(defun album (id3) (get-text-info id3 "TAL TALB"))
 (defun track (id3) (get-text-info id3 "TRK TRCK"))
 (defun year (id3) (get-text-info id3 "TYE" "TYER" "TDRC"))
 (defun genre (id3) (get-text-info id3 "TCO TCON"))

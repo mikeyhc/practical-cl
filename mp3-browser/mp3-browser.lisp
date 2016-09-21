@@ -38,6 +38,8 @@
 
 (defparameter *playlists-lock* (make-process-lock :name "playlists-lock"))
 
+(defparameter *silence-mp3* "mp3-browser/silence.mp3")
+
 (defun lookup-playlist (id)
   (with-process-lock (*playlists-lock*)
     (or (gethash id *playlists*)
@@ -68,3 +70,53 @@
     nil
     (column-value (nth-row (current-idx playlist) (songs-table playlist))
                   :file)))
+
+(defun update-current-if-necessary (playlist)
+  (unless (equal (file (current-song playlist))
+                 (file-for-current-idx playlist))
+    (reset-current-song playlist)))
+
+(defun make-silent-song (title &optional (file *silence-mp3*))
+  (make-instance
+    'song
+    :file file
+    :title title
+    :id3-size (if (id3-p file) (size (read-id3 file)) 0)))
+
+(defparameter *empty-playlist-song*
+  (make-silent-song "Playlist empty."))
+
+(defparameter *end-of-playlist-song*
+  (make-silent-song "At end of playlist."))
+
+(defun row->song (song-db-entry)
+  (with-column-values (file song artist id3-size) song-db-entry
+    (make-instance
+      'song
+      :file file
+      :title (format nil "~a by ~a from ~a" song artist album)
+      :id3-size id3-size)))
+
+(defun empty-p (playlist)
+  (zerop (table-size (songs-table playlist))))
+
+(defun reset-current-song (playlist)
+  (setf
+    (current-song playlist)
+    (cond
+      ((empty-p playlist) *empty-playlist-song*)
+      ((at-end-p playlist) *end-of-playlist-song*)
+      (t (row->song (nth-row (current-idx playlist)
+                             (songs-table playlist)))))))
+
+(defmethod maybe-move-to-next-song (song (playlist playlist))
+  (with-playlist-locked (playlist)
+    (when (still-current-p song playlist)
+      (unless (at-end-p playlist)
+        (ecase (repeat playlist)
+          (:song) ; nothing changes
+          (:none (incf (current-idx playlist)))
+          (:all  (setf (current-idx playlist)
+                       (mod (1+ (current-idx playlist))
+                            (table-size (songs-table playlist)))))))
+      (update-current-if-necessary playlist))))

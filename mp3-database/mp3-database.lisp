@@ -66,6 +66,11 @@
      :initarg :value-normalizer
      :initform #'(lambda (v column) (declare (ignore column)) v))))
 
+(defun intern-for-column (value column)
+  (let ((hash (interned-values column)))
+    (or (gethash (not-nullable value column) hash)
+        (setf (gethash value hash) value))))
+
 (defclass interned-values-column (column)
   ((interned-values
      :reader interned-values
@@ -77,11 +82,6 @@
 
 (defun not-nullable (value column)
   (or value (error "Column ~a can't be null" (name column))))
-
-(defun intern-for-column (value column)
-  (let ((hash (interned-values column)))
-    (or (gethash (not-nullable value column) hash)
-        (setf (gethash value hash) value))))
 
 (defmethod make-column (name (type (eql 'string)) &optional default-value)
   (make-instance

@@ -13,7 +13,7 @@
            :delete-all-rows
            :delete-rows
            :do-rows
-           :extract-scheme
+           :extract-schema
            :in
            :insert-row
            :load-database
@@ -264,7 +264,7 @@
   (intern (symbol-name symbol) :keyword))
 
 (defun column-bindings (vars row)
-  (loop for v across vars collect `(,v (column-value ,row ,(as-keyword v)))))
+  (loop for v in vars collect `(,v (column-value ,row ,(as-keyword v)))))
 
 (defmacro with-column-values ((&rest vars) row &body body)
   (once-only (row)

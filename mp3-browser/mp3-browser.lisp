@@ -90,7 +90,7 @@
   (make-silent-song "At end of playlist."))
 
 (defun row->song (song-db-entry)
-  (with-column-values (file song artist id3-size) song-db-entry
+  (with-column-values (file song artist album id3-size) song-db-entry
     (make-instance
       'song
       :file file
@@ -120,3 +120,80 @@
                        (mod (1+ (current-idx playlist))
                             (table-size (songs-table playlist)))))))
       (update-current-if-necessary playlist))))
+
+(defun add-songs (playlist column-name values)
+  (let ((table (make-instance
+                 'table
+                 :schema (extract-schema (list column-name) (schema *mp3s*)))))
+    (dolist (v values) (insert-row (list column-name v) table))
+    (do-rows (row (select :from *mp3s* :where (in column-name table)))
+      (insert-row row (songs-table playlist))))
+  (update-current-if-necessary playlist))
+
+(defun position-of-current (playlist)
+  (let* ((table (songs-table playlist))
+         (matcher (matching table :file (file (current-song playlist))))
+         (pos 0))
+    (do-rows (row table)
+      (when (funcall matcher row)
+        (return-from position-of-current pos))
+      (incf pos))))
+
+(defun delete-songs (playlist &rest names-and-values)
+  (delete-rows
+    :from (songs-table playlist)
+    :where (apply #'matching (songs-table playlist) names-and-values))
+  (setf (current-idx playlist) (or (position-of-current playlist) 0)))
+
+(defun clear-current-playlist (playlist)
+  (delete-all-rows (songs-table playlist))
+  (setf (current-idx playlist) 0)
+  (update-current-if-necessary playlist))
+
+(defun order-playlist (playlist)
+  (apply #'sort-rows (songs-table playlist)
+    (case (ordering playlist)
+      (:genre  '(:genre :album :track))
+      (:artist '(:artist :album :track))
+      (:album  '(:album :track))
+      (:song   '(:song)))))
+
+(defun sort-playlist (playlist ordering)
+  (setf (ordering playlist) ordering)
+  (setf (shuffle playlist) :none)
+  (order-playlist playlist)
+  (setf (current-idx playlist) (position-of-current playlist)))
+
+(defun shuffle-by-song (playlist)
+  (shuffle-table (songs-table playlist)))
+
+(defun shuffled-album-names (playlist)
+  (shuffle-table
+    (select
+      :columns :album
+      :from (songs-table playlist)
+      :distinct t)))
+
+(defun songs-for-album (playlist album)
+  (select
+    :from (songs-table playlist)
+    :where (matching (songs-table playlist) :album album)
+    :order-by :track))
+
+(defun shuffle-by-album (playlist)
+  (let ((new-table (make-playlist-table)))
+    (do-rows (album-row (shuffled-album-names playlist))
+      (do-rows (song (songs-for-album playlist
+                                      (column-value album-row :album)))
+        (insert-row song new-table)))
+    (setf (songs-table playlist) new-table)))
+
+(defmethod (setf repeat) :after (value (playlist playlist))
+  (if (and (at-end-p playlist) (not (empty-p playlist)))
+    (ecase value
+      (:song (setf (current-idx playlist)
+                   (1- (table-size (songs-table playlist)))))
+      (:none)
+      (:all (setf (current-idx playlist) 0))
+      )
+    (update-current-if-necessary playlist)))

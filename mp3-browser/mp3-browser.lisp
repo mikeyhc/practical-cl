@@ -16,6 +16,9 @@
 
 (in-package :net.atmosia.mp3-browser)
 
+(defparameter *major-version* 0)
+(defparameter *minor-version* 1)
+
 (defun make-playlist-table ()
   (make-instance 'table :schema *mp3-schema*))
 
@@ -197,3 +200,59 @@
       (:all (setf (current-idx playlist) 0))
       )
     (update-current-if-necessary playlist)))
+
+(defmethod string->type ((type (eql 'integer)) value)
+  (parse-integer (or value "") :junk-allowed t))
+
+(defmethod string->type ((type (eql 'keyword)) value)
+  (and (plusp (length value)) (intern (string-upcase value) :keyword)))
+
+(defmacro with-safe-io-syntax (&body body)
+  `(with-standard-io-syntax
+     (let ((*read-eval* nil))
+       ,@body)))
+
+(defun obj->base64 (obj)
+  (base64-encode (with-safe-io-syntax (write-to-string obj))))
+
+(defun base64->obj (string)
+  (ignore-errors
+    (with-safe-io-syntax (read-from-string (base64-decode string)))))
+
+(defmethod string->type ((type (eql 'base-64-list)) value)
+  (let ((obj (base64->obj value)))
+    (if (listp obj) obj nil)))
+
+(defparameter *r* 25)
+
+(defun standard-header ()
+  (html
+    ((:p :class "toolbar")
+     "[" (:a :href (link "/browse" :what "genre") "All genres") "]"
+     "[" (:a :href (link "/browse" :what "genre" :random *r*)
+          "Random genres") "]"
+     "[" (:a :href (link "/browse" :what "artist") "All artists") "]"
+     "[" (:a :href (link "/browse" :what "artist" :random *r*)
+          "Random artists") "]"
+     "[" (:a :href (link "/browse" :what "album") "All albums") "]"
+     "[" (:a :href (link "/browse" :what "album" :random *r*)
+          "Random albums") "]"
+     "[" (:a :href (link "/browse" :what "song" :random *r*)
+          "Random songs") "]"
+     "[" (:a :href (link "/playlist") "Playlist") "]"
+     "[" (:a :href (link "/all-playlists") "All playlists") "]")))
+
+(defun standard-footer ()
+  (html (:hr) ((:p :class "footer") "MP3 Browser v" *major-version* "."
+                                    *minor-version*)))
+
+(define-html-macro :mp3-browser-page ((&key title (header title)) &body body)
+  `(:html
+     (:head
+       (:title ,title)
+       (:link :rel "stylesheet" :type "text/css" :href "mp3-browser.css"))
+     (:body
+       (standard-header)
+       (when ,header (html (:h1 :class "title" ,header)))
+       ,@body
+       (standard-footer))))
